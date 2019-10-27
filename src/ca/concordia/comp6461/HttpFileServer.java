@@ -43,13 +43,29 @@ public class HttpFileServer {
 
 				String fileName = parsedString[1];
 
-				if (method.equalsIgnoreCase("GET")) {
+				if (method.equalsIgnoreCase("GET") && fileName.length() > 1) {
 
 					PrintWriter printWriterOut = new PrintWriter(client.getOutputStream());
 
 					BufferedOutputStream buffOutStream = new BufferedOutputStream(client.getOutputStream());
 
-					printWriterOut.println("HTTP/1.1 200 OK");
+					int checkFileExists = getFileLength(fileName);
+
+					if (checkFileExists > 0) {
+
+						printWriterOut.println("HTTP/1.1 200 OK");
+						
+						printWriterOut.println("Content-length: " + checkFileExists);
+
+					} else {
+
+						printWriterOut.println("HTTP/1.1 404 FILE NOT FOUND");
+						
+						String fileNotFound = "HTTP 404 :File Requested Not found";
+						
+						printWriterOut.println("Content-length: " + fileNotFound.length());
+
+					}
 
 					printWriterOut.println("Server: httpfs");
 
@@ -57,7 +73,7 @@ public class HttpFileServer {
 
 					printWriterOut.println("Content-type: " + "text/plain");
 
-					printWriterOut.println("Content-length: " + getFileLength(fileName));
+					
 
 					printWriterOut.println();
 
@@ -87,10 +103,17 @@ public class HttpFileServer {
 		String path = fileName.substring(1);
 
 		URL url = HttpFileServer.class.getResource(path);
-		
-		File file = new File(url.getPath());
-		
-		return (int) file.length();
+
+		if (url != null) {
+
+			File file = new File(url.getPath());
+
+			return (int) file.length();
+
+		} else {
+
+			return 0;
+		}
 
 	}
 
@@ -100,7 +123,17 @@ public class HttpFileServer {
 
 		URL url = HttpFileServer.class.getResource(file);
 
-		byte[] content = Files.readAllBytes(Paths.get(url.getPath()));
+		byte[] content = null;
+
+		if (url != null) {
+
+			content = Files.readAllBytes(Paths.get(url.getPath()));
+
+		} else {
+
+			content = "HTTP 404 :File Requested Not found ".getBytes();
+
+		}
 
 		return content;
 
