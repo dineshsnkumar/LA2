@@ -1,0 +1,8 @@
+curl -d "data=example1&data2=example2" http://localhost:8080/bar
+
+----------------------GET Requests using curl --------------------------------------
+
+curl http://localhost:8080/foo
+curl -v  http://localhost:8080/foo
+
+curl http://localhost:8080/RealtiveDir/InsideFoo
