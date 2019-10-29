@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * References 
@@ -30,19 +32,31 @@ public class HttpFileServer {
 
 	private static String currentDir = "";
 
+	private static Logger LOGGER = Logger.getLogger(HttpFileServer.class.getName());
+	
+	private Socket socket;
+
 	public static void main(String[] args) {
 
 		try {
 
+			// Start the server
+			
 			Scanner scan = new Scanner(System.in);
 
 			String command = scan.nextLine();
 
 			String[] splitCommand = command.split("\\s+");
+			
+			LOGGER.setLevel(Level.OFF);
 
 			if (command.contains("-v")) {
 
 				verbose = true;
+
+				LOGGER.setLevel(Level.ALL);
+
+				LOGGER.info("Verbose ennabled");
 
 			}
 
@@ -76,12 +90,11 @@ public class HttpFileServer {
 
 			}
 
-			
-			System.out.println("Current Dir" + currentDir);
-			
-			ServerSocket server = new ServerSocket(port);
+			LOGGER.info("Current Dir" + currentDir);
 
-			System.out.println("Server is listening at port:" + port);
+			ServerSocket server = new ServerSocket(port);
+			
+			LOGGER.info("Server is listening at port:" + port);
 
 			while (true) {
 
@@ -177,11 +190,11 @@ public class HttpFileServer {
 
 				} else if (method.equalsIgnoreCase("GET")) {
 
-					System.out.println("Invoking GET to list all the files in current directory");
+					LOGGER.info("Invoking GET to list all the files in current directory");
 
 					StringBuffer fileList = listAllFiles();
 
-					System.out.println(fileList);
+					LOGGER.info(fileList.toString());
 
 					printWriterOut.println("HTTP/1.1 200 OK");
 
@@ -205,7 +218,7 @@ public class HttpFileServer {
 
 				if (method.equalsIgnoreCase("POST")) {
 
-					System.out.println("POST method invoked");
+					LOGGER.info("POST method invoked");
 
 					int size = createNewFile(fileName, post);
 
@@ -243,10 +256,10 @@ public class HttpFileServer {
 		StringBuffer filesList = new StringBuffer();
 
 		Path path = Paths.get("");
-		
+
 		String s = path.toAbsolutePath().toString();
 
-		File file = new File(s+currentDir);
+		File file = new File(s + currentDir);
 
 		File[] filesInDir = file.listFiles();
 
@@ -268,7 +281,7 @@ public class HttpFileServer {
 
 		String s = path.toAbsolutePath().toString();
 
-		String completePath = s + currentDir +fileName;
+		String completePath = s + currentDir + fileName;
 
 		File file = new File(completePath);
 
@@ -285,7 +298,7 @@ public class HttpFileServer {
 	public static int createNewFile(String url, String postData) throws IOException {
 
 		String path = Paths.get(".").toAbsolutePath().toString();
-	
+
 		String newFilePath = path + currentDir + url;
 
 		File file = new File(newFilePath);
@@ -294,13 +307,13 @@ public class HttpFileServer {
 
 			boolean fileCreated = file.createNewFile();
 
-			System.out.println("File created" + fileCreated);
+			LOGGER.info("File created" + fileCreated);
 
 			Files.write(Paths.get(newFilePath), postData.getBytes());
 
 		} else {
 
-			System.out.println("File is already present updating content");
+			LOGGER.info("File is already present updating content");
 
 			Files.write(Paths.get(newFilePath), postData.getBytes());
 
