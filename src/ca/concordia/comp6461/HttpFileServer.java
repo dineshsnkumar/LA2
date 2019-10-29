@@ -8,30 +8,77 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.Scanner;
 
 /*
  * References 
  * 	https://github.com/lakshayverma629/COMP6461LA2/blob/master/src/com/COMP6461/server/SocketConnectionFromServer.java
+ * https://stackoverflow.com/questions/6142901/how-to-create-a-file-in-a-directory-in-java
+ * https://medium.com/@ssaurel/create-a-simple-http-web-server-in-java-3fc12b29d5fd
+ * 
  */
 
 public class HttpFileServer {
 
 	private static int port = 8080;
 
-	private static boolean verbose = true;
+	private static boolean verbose = false;
 
-	private Socket socket;
+	private static String currentDir = "";
 
 	public static void main(String[] args) {
 
 		try {
 
+			Scanner scan = new Scanner(System.in);
+
+			String command = scan.nextLine();
+
+			String[] splitCommand = command.split("\\s+");
+
+			if (command.contains("-v")) {
+
+				verbose = true;
+
+			}
+
+			if (command.contains("-p")) {
+
+				for (int i = 0; i < splitCommand.length; i++) {
+
+					String s = splitCommand[i];
+
+					if (s.contains("-p")) {
+
+						port = Integer.parseInt(splitCommand[i + 1]);
+
+					}
+				}
+
+			}
+
+			if (command.contains("-d")) {
+
+				for (int i = 0; i < splitCommand.length; i++) {
+
+					String s = splitCommand[i];
+
+					if (s.contains("-d")) {
+
+						currentDir = splitCommand[i + 1];
+
+					}
+				}
+
+			}
+
+			
+			System.out.println("Current Dir" + currentDir);
+			
 			ServerSocket server = new ServerSocket(port);
 
 			System.out.println("Server is listening at port:" + port);
@@ -93,9 +140,9 @@ public class HttpFileServer {
 				if (method.equalsIgnoreCase("GET") && fileName.length() > 1) {
 
 					int checkFileExists = getFileLength(fileName);
-					
+
 					boolean check = checkIfFileExists(fileName);
-						
+
 					if (checkFileExists > 0) {
 
 						printWriterOut.println("HTTP/1.1 200 OK");
@@ -131,11 +178,11 @@ public class HttpFileServer {
 				} else if (method.equalsIgnoreCase("GET")) {
 
 					System.out.println("Invoking GET to list all the files in current directory");
-					
-					StringBuffer fileList= listAllFiles();
-					
+
+					StringBuffer fileList = listAllFiles();
+
 					System.out.println(fileList);
-					
+
 					printWriterOut.println("HTTP/1.1 200 OK");
 
 					printWriterOut.println("Content-length: " + fileList.length());
@@ -153,7 +200,6 @@ public class HttpFileServer {
 					buffOutStream.write(fileList.toString().getBytes());
 
 					buffOutStream.flush();
-					
 
 				}
 
@@ -197,55 +243,50 @@ public class HttpFileServer {
 		StringBuffer filesList = new StringBuffer();
 
 		Path path = Paths.get("");
-
+		
 		String s = path.toAbsolutePath().toString();
-		
-		File file = new File(s);
-		
+
+		File file = new File(s+currentDir);
+
 		File[] filesInDir = file.listFiles();
-		
-		for(File f : filesInDir) {
-			
+
+		for (File f : filesInDir) {
+
 			filesList.append(f.toString());
-			
+
 			filesList.append("\n");
-			
+
 		}
 
 		return filesList;
 
 	}
-	
-	
-	
+
 	public static boolean checkIfFileExists(String fileName) {
-		
+
 		Path path = Paths.get("");
 
 		String s = path.toAbsolutePath().toString();
-		
-		String completePath = s+fileName;
-		
+
+		String completePath = s + currentDir +fileName;
+
 		File file = new File(completePath);
-		
-		if(file.exists()) {
-			
+
+		if (file.exists()) {
+
 			return true;
-			
+
 		}
-		
+
 		return false;
-		
+
 	}
-	
-	
-	
 
 	public static int createNewFile(String url, String postData) throws IOException {
 
 		String path = Paths.get(".").toAbsolutePath().toString();
-
-		String newFilePath = path + url;
+	
+		String newFilePath = path + currentDir + url;
 
 		File file = new File(newFilePath);
 
@@ -270,13 +311,12 @@ public class HttpFileServer {
 	}
 
 	public static int getFileLength(String fileName) {
-		
+
 		Path path = Paths.get("");
 
 		String s = path.toAbsolutePath().toString();
 
-		String completePath = s+fileName;
-
+		String completePath = s + fileName;
 
 		if (s != null) {
 
@@ -298,7 +338,7 @@ public class HttpFileServer {
 		String newFilePath = path + url;
 
 		byte[] content = null;
-		
+
 		File file = new File(newFilePath);
 
 		if (file.exists()) {
