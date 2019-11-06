@@ -33,7 +33,7 @@ public class HttpFileServer {
 	private static String currentDir = "";
 
 	private static Logger LOGGER = Logger.getLogger(HttpFileServer.class.getName());
-	
+
 	private Socket socket;
 
 	public static void main(String[] args) {
@@ -41,13 +41,13 @@ public class HttpFileServer {
 		try {
 
 			// Start the server
-			
+
 			Scanner scan = new Scanner(System.in);
 
 			String command = scan.nextLine();
 
 			String[] splitCommand = command.split("\\s+");
-			
+
 			LOGGER.setLevel(Level.OFF);
 
 			if (command.contains("-v")) {
@@ -93,7 +93,7 @@ public class HttpFileServer {
 			LOGGER.info("Current Dir" + currentDir);
 
 			ServerSocket server = new ServerSocket(port);
-			
+
 			LOGGER.info("Server is listening at port:" + port);
 
 			while (true) {
@@ -150,55 +150,19 @@ public class HttpFileServer {
 
 				BufferedOutputStream buffOutStream = new BufferedOutputStream(client.getOutputStream());
 
-				if (method.equalsIgnoreCase("GET") && fileName.length() > 1) {
+				boolean security = checkSecurityAccess(fileName);
 
-					int checkFileExists = getFileLength(fileName);
-
-					boolean check = checkIfFileExists(fileName);
-
-					if (checkFileExists > 0) {
-
-						printWriterOut.println("HTTP/1.1 200 OK");
-
-						printWriterOut.println("Content-length: " + checkFileExists);
-
-					} else {
-
-						System.out.println("File Not found");
-
-						printWriterOut.println("HTTP/1.1 404 FILE NOT FOUND");
-
-						String fileNotFound = "HTTP 404 :File Requested Not found";
-
-						printWriterOut.println("Content-length: " + fileNotFound.length());
-
-					}
-
-					printWriterOut.println("Server: httpfs");
-
-					printWriterOut.println("Date: " + new Date());
-
-					printWriterOut.println("Content-type: " + "text/plain");
-
-					printWriterOut.println();
-
-					printWriterOut.flush();
-
-					buffOutStream.write(readContentFromFile(fileName));
-
-					buffOutStream.flush();
-
-				} else if (method.equalsIgnoreCase("GET")) {
+				// Access Denied
+				
+				if (!security) {
 
 					LOGGER.info("Invoking GET to list all the files in current directory");
 
-					StringBuffer fileList = listAllFiles();
+					String accessDenied = "Access Denied: The file you are accessing is outside the working dir";
 
-					LOGGER.info(fileList.toString());
+					printWriterOut.println("HTTP/1.1 403 Acess Denied");
 
-					printWriterOut.println("HTTP/1.1 200 OK");
-
-					printWriterOut.println("Content-length: " + fileList.length());
+					printWriterOut.println("Content-length: " + accessDenied.length());
 
 					printWriterOut.println("Server: httpfs");
 
@@ -210,35 +174,103 @@ public class HttpFileServer {
 
 					printWriterOut.flush();
 
-					buffOutStream.write(fileList.toString().getBytes());
+					buffOutStream.write(accessDenied.toString().getBytes());
 
 					buffOutStream.flush();
 
-				}
+				} else {
 
-				if (method.equalsIgnoreCase("POST")) {
+					if (method.equalsIgnoreCase("GET") && fileName.length() > 1) {
 
-					LOGGER.info("POST method invoked");
+						int checkFileExists = getFileLength(fileName);
 
-					int size = createNewFile(fileName, post);
+						boolean check = checkIfFileExists(fileName);
 
-					printWriterOut.println("HTTP/1.1 200 OK");
+						if (checkFileExists > 0) {
 
-					printWriterOut.println("Content-length: " + "Successfuly created".length());
+							printWriterOut.println("HTTP/1.1 200 OK");
 
-					printWriterOut.println("Server: httpfs");
+							printWriterOut.println("Content-length: " + checkFileExists);
 
-					printWriterOut.println("Date: " + new Date());
+						} else {
 
-					printWriterOut.println("Content-type: " + "text/plain");
+							System.out.println("File Not found");
 
-					printWriterOut.println();
+							printWriterOut.println("HTTP/1.1 404 FILE NOT FOUND");
 
-					printWriterOut.flush();
+							String fileNotFound = "HTTP 404 :File Requested Not found";
 
-					buffOutStream.write("Successfuly created \n".getBytes());
+							printWriterOut.println("Content-length: " + fileNotFound.length());
 
-					buffOutStream.flush();
+						}
+
+						printWriterOut.println("Server: httpfs");
+
+						printWriterOut.println("Date: " + new Date());
+
+						printWriterOut.println("Content-type: " + "text/plain");
+
+						printWriterOut.println();
+
+						printWriterOut.flush();
+
+						buffOutStream.write(readContentFromFile(fileName));
+
+						buffOutStream.flush();
+
+					} else if (method.equalsIgnoreCase("GET")) {
+
+						LOGGER.info("Invoking GET to list all the files in current directory");
+
+						StringBuffer fileList = listAllFiles();
+
+						LOGGER.info(fileList.toString());
+
+						printWriterOut.println("HTTP/1.1 200 OK");
+
+						printWriterOut.println("Content-length: " + fileList.length());
+
+						printWriterOut.println("Server: httpfs");
+
+						printWriterOut.println("Date: " + new Date());
+
+						printWriterOut.println("Content-type: " + "text/plain");
+
+						printWriterOut.println();
+
+						printWriterOut.flush();
+
+						buffOutStream.write(fileList.toString().getBytes());
+
+						buffOutStream.flush();
+
+					}
+
+					if (method.equalsIgnoreCase("POST")) {
+
+						LOGGER.info("POST method invoked");
+
+						int size = createNewFile(fileName, post);
+
+						printWriterOut.println("HTTP/1.1 200 OK");
+
+						printWriterOut.println("Content-length: " + "Successfuly created".length());
+
+						printWriterOut.println("Server: httpfs");
+
+						printWriterOut.println("Date: " + new Date());
+
+						printWriterOut.println("Content-type: " + "text/plain");
+
+						printWriterOut.println();
+
+						printWriterOut.flush();
+
+						buffOutStream.write("Successfuly created \n".getBytes());
+
+						buffOutStream.flush();
+
+					}
 
 				}
 
@@ -249,6 +281,23 @@ public class HttpFileServer {
 			e.printStackTrace();
 		}
 
+	}
+
+	private static boolean checkSecurityAccess(String fileName) {
+
+		String parsedUrl[] = fileName.split("/");
+
+		int endIndex = fileName.lastIndexOf("/");
+
+		String urlDir = fileName.substring(0, endIndex);
+
+		if (urlDir.equals("")) {
+
+			return true;
+
+		}
+
+		return false;
 	}
 
 	public static StringBuffer listAllFiles() {
